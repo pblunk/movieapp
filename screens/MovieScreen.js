@@ -17,6 +17,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Cast from '../components/cast';
 import MovieList from '../components/movieList';
 import Loading from '../components/loading';
+import {
+  fallbackMoviePoster,
+  fetchMovieCredits,
+  fetchMovieDetails,
+  fetchSimilarMovies,
+} from '../api/moviedb';
+import { image500 } from '../api/moviedb';
 
 var { width, height } = Dimensions.get('window');
 const ios = Platform.OS == 'ios';
@@ -26,13 +33,37 @@ export default function MovieScreen() {
   const { params: item } = useRoute();
   const [isFavorite, toggleFavorite] = useState(false);
   const navigation = useNavigation();
-  const [cast, setCast] = useState([1, 2, 3, 4, 5]);
-  const [similarMovies, setSimilarMovies] = useState([1, 2, 3, 4, 5]);
+  const [cast, setCast] = useState([]);
+  const [similarMovies, setSimilarMovies] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [movie, setMovie] = useState({});
   let movieName = 'Ant-Man and the Wasp: Quantumania';
   useEffect(() => {
-    // call the movie details api
+    // console.log('itemid: ', item.id);
+    setLoading(true);
+    getMovieDetails(item.id);
+    getMovieCredits(item.id);
+    getSimilarMovies(item.id);
   }, [item]);
+
+  const getMovieDetails = async (id) => {
+    const data = await fetchMovieDetails(id);
+    // console.log('get movie details: ', data);
+    if (data) setMovie(data);
+    setLoading(false);
+  };
+
+  const getMovieCredits = async (id) => {
+    const data = await fetchMovieCredits(id);
+    //console.log('get credits: ', data);
+    if (data && data.cast) setCast(data.cast);
+  };
+
+  const getSimilarMovies = async (id) => {
+    const data = await fetchSimilarMovies(id);
+    // console.log('get similar movies: ', data);
+    if (data && data.results) setSimilarMovies(data.results);
+  };
 
   return (
     <ScrollView
@@ -67,7 +98,10 @@ export default function MovieScreen() {
         ) : (
           <View>
             <Image
-              source={require('../assets/images/moviePoster2.png')}
+              //source={require('../assets/images/moviePoster2.png')}
+              source={{
+                uri: image500(movie?.poster_path) || fallbackMoviePoster,
+              }}
               style={{ width, height: height * 0.55 }}
             />
             <LinearGradient
@@ -89,14 +123,30 @@ export default function MovieScreen() {
       <View style={{ marginTop: -(height * 0.09) }} className="space-y-3">
         {/* title */}
         <Text className="text-white text-center text-3xl font-bold tracking-wider">
-          {movieName}
+          {movie?.title}
         </Text>
         {/* status, release, runtime */}
-        <Text className="text-neutral-400 font-semibold text-base text-center">
-          Released • 2020 • 170 min
-        </Text>
+        {movie?.id ? (
+          <Text className="text-neutral-400 font-semibold text-base text-center">
+            {movie?.status} • {movie?.release_date?.split('-')[0] || 'N/A'} •{' '}
+            {movie?.runtime} min
+          </Text>
+        ) : null}
+
         {/*  genres */}
         <View className="flex-row justify-center mx-4 space-x-2">
+          {movie?.genres?.map((genre, index) => {
+            let showDot = index + 1 != movie.genres.length;
+            return (
+              <Text
+                key={index}
+                className="text-neutral-400 font-semibold text-base text-center"
+              >
+                {genre.name} {showDot ? '•' : null}
+              </Text>
+            );
+          })}
+          {/*
           <Text className="text-neutral-400 font-semibold text-base text-center">
             Action •
           </Text>
@@ -105,15 +155,11 @@ export default function MovieScreen() {
           </Text>
           <Text className="text-neutral-400 font-semibold text-base text-center">
             Comedy
-          </Text>
+          </Text> */}
         </View>
         {/* description */}
         <Text className="text-neutral-400 mx-4 tracking-wide">
-          Super-Hero partners Scott Lang and Hope van Dyne, along with Hope's
-          parents Janet van Dyne and Hank Pym, and Scott's daugher Cassie Lang,
-          find themselves exploring the Quantum Realm, interacting with strange
-          new creatures and embarking on an adventure that will push them beyond
-          the limits of what they thought possible.
+          {movie?.overview}
         </Text>
       </View>
 
@@ -121,11 +167,11 @@ export default function MovieScreen() {
       <Cast navigation={navigation} cast={cast} />
 
       {/* similar movies */}
-      {/*<MovieList
+      <MovieList
         title="Similar Movies"
         hideSeeAll={true}
         data={similarMovies}
-            /> */}
+      />
     </ScrollView>
   );
 }

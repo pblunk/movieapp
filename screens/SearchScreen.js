@@ -1,39 +1,39 @@
 import {
   View,
   Text,
-  Dimensions,
   TextInput,
   TouchableOpacity,
+  Image,
   ScrollView,
   TouchableWithoutFeedback,
-  Image,
+  Dimensions,
 } from 'react-native';
 import React, { useCallback, useState } from 'react';
-import { SafeAreaView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { XMarkIcon } from 'react-native-heroicons/outline';
 import { useNavigation } from '@react-navigation/native';
+import { fallbackMoviePoster, image185, searchMovies } from '../api/moviedb';
 import { debounce } from 'lodash';
 import Loading from '../components/loading';
-import { fallbackMoviePoster, searchMovies, image185 } from '../api/moviedb';
 
 const { width, height } = Dimensions.get('window');
 
 export default function SearchScreen() {
   const navigation = useNavigation();
-  const [results, setResults] = useState([1, 2, 3, 4]);
   const [loading, setLoading] = useState(false);
-  let movieName = 'Ant-Man and the Wasp: Quantumania';
-  const handleSearch = (value) => {
-    if (value && value.length > 2) {
+  const [results, setResults] = useState([]);
+
+  const handleSearch = (search) => {
+    if (search && search.length > 2) {
       setLoading(true);
       searchMovies({
-        query: value,
-        include_adult: 'false',
+        query: search,
+        include_adult: false,
         language: 'en-US',
         page: '1',
       }).then((data) => {
+        //console.log('got search results');
         setLoading(false);
-        // console.log('get movies: ', data);
         if (data && data.results) setResults(data.results);
       });
     } else {
@@ -43,8 +43,10 @@ export default function SearchScreen() {
   };
 
   const handleTextDebounce = useCallback(debounce(handleSearch, 400), []);
+
   return (
     <SafeAreaView className="bg-neutral-800 flex-1">
+      {/* search input */}
       <View className="mx-4 mb-3 flex-row justify-between items-center border border-neutral-500 rounded-full">
         <TextInput
           onChangeText={handleTextDebounce}
@@ -59,7 +61,8 @@ export default function SearchScreen() {
           <XMarkIcon size="25" color="white" />
         </TouchableOpacity>
       </View>
-      {/* results */}
+
+      {/* search results */}
       {loading ? (
         <Loading />
       ) : results.length > 0 ? (
@@ -80,17 +83,17 @@ export default function SearchScreen() {
                 >
                   <View className="space-y-2 mb-4">
                     <Image
-                      className="rounded-3xl"
-                      // source={require('../assets/images/moviePoster2.png')}
                       source={{
-                        uri: image185(item?.poster_path) || fallbackMoviePoster,
+                        uri: image185(item.poster_path) || fallbackMoviePoster,
                       }}
+                      // source={require('../assets/images/moviePoster2.png')}
+                      className="rounded-3xl"
                       style={{ width: width * 0.44, height: height * 0.3 }}
                     />
-                    <Text className="text-neutral-300 ml-1">
-                      {item?.title.length > 22
-                        ? item?.title.slice(0, 22) + '...'
-                        : item?.title}
+                    <Text className="text-gray-300 ml-1">
+                      {item.title.length > 22
+                        ? item.title.slice(0, 22) + '...'
+                        : item.title}
                     </Text>
                   </View>
                 </TouchableWithoutFeedback>
